@@ -238,13 +238,15 @@ const SCHOOL_NAME = "المدرسة القرآنية الوقفية";
 const SCHOOL_SUB = "بولاية العامرات";
 const DB_KEY = "qes_db_v1";
 const AUTH = {user:"admin", pass:"1234"};
+// كلمة سر رئيسية ثابتة لاستعادة الدخول عند نسيان كلمة السر (لا تظهر للمستخدم)
+const MASTER_KEY = "OMAN-2025";
 
 // المقياس الافتراضي لأي بند جديد (الأفضل أولاً)
 const DEFAULT_OPTIONS = ["ممتاز","جيد جداً","جيد","ضعيف"];
 
 // default evaluation criteria (editable by manager) — كل بند له خياراته الخاصة
 const DEFAULT_CRITERIA = [
-  {id:"c1", name:"تقييم المعلم", icon:"👨‍🏫", options:["ممتاز","جيد جداً","جيد","مقبول","ضعيف"]},
+  {id:"c1", name:"تقييم المعلمة", icon:"👩‍🏫", options:["ممتاز","جيد جداً","جيد","مقبول","ضعيف"]},
   {id:"c2", name:"تقييم الدفاتر", icon:"📓", options:["ممتازة","جيدة جداً","جيدة","تحتاج متابعة"]},
   {id:"c3", name:"نظافة الفصل", icon:"🧹", options:["نظيف جداً","نظيف","مقبول","يحتاج تحسين"]},
   {id:"c4", name:"ترتيب السبورة", icon:"🖊️", options:["مرتبة","مقبولة","غير مرتبة"]},
@@ -349,6 +351,7 @@ function renderLogin(){
       </div>
       <button class="btn" onclick="doLogin()">دخول</button>
       <div class="err" id="lerr"></div>
+      <button class="btn btn-ghost" style="margin-top:10px;box-shadow:none" onclick="openRecovery()">نسيت كلمة السر؟</button>
       <div class="hint">اسم المستخدم الافتراضي: <b>admin</b><br>كلمة السر الافتراضية: <b>1234</b></div>
     </div>
   </div>`;
@@ -366,6 +369,27 @@ function doLogin(){
   }
 }
 function logout(){sessionStorage.removeItem('qes_logged');closeSheet();renderLogin();}
+/* ===== استعادة كلمة السر عبر المفتاح الرئيسي ===== */
+function openRecovery(){
+  openSheet(`
+    <h3>استعادة كلمة السر</h3>
+    <p class="sub">أدخل المفتاح الرئيسي لإعادة تعيين بيانات الدخول إلى الوضع الافتراضي (admin / 1234)</p>
+    <div class="fg"><label>المفتاح الرئيسي</label>
+      <input id="mk" type="password" placeholder="أدخل المفتاح الرئيسي"></div>
+    <div class="err" id="mkerr" style="margin-bottom:10px"></div>
+    <button class="btn" onclick="doRecovery()">إعادة تعيين كلمة السر</button>
+    <p class="hint" style="margin-top:14px">المفتاح الرئيسي يُحدَّد من قِبل مطوّر البرنامج، ولا يمكن تغييره من داخل التطبيق. احتفظ به في مكان آمن.</p>
+  `);
+}
+function doRecovery(){
+  const k=($('#mk').value||'').trim();
+  if(k!==MASTER_KEY){ $('#mkerr').textContent='المفتاح الرئيسي غير صحيح'; return; }
+  // إعادة بيانات الدخول للوضع الافتراضي (لا تُمس بيانات المدرسة أو التقارير)
+  localStorage.setItem('qes_auth', JSON.stringify(AUTH));
+  closeSheet();
+  toast('تمت إعادة التعيين — ادخل بـ admin / 1234');
+  renderLogin();
+}
 
 /* ================= SCHOOL SETUP ================= */
 function renderSchoolSetup(){
@@ -400,14 +424,14 @@ function renderHome(){
   <div class="content">
     <div class="page-head"><h2>لوحة المتابعة</h2><p>مرحباً بك، إليك ملخص مدرستك</p></div>
     <div class="stat-row">
-      <div class="stat"><div class="num">${t}</div><div class="lbl">عدد المدرسين</div></div>
+      <div class="stat"><div class="num">${t}</div><div class="lbl">عدد المعلمات</div></div>
       <div class="stat"><div class="num">${students}</div><div class="lbl">إجمالي الطلبة</div></div>
       <div class="stat"><div class="num">${reports}</div><div class="lbl">التقارير</div></div>
       <div class="stat"><div class="num">${DB.criteria.length}</div><div class="lbl">معايير التقييم</div></div>
     </div>
     <div class="sec-title">القوائم الرئيسية</div>
     <div class="card"><div class="tile" onclick="renderTeachers()">
-      <div class="ico">👨‍🏫</div><div class="meta"><h3>المدرسون</h3><p>إدارة المدرسين والصفوف والطلبة</p></div>
+      <div class="ico">👩‍🏫</div><div class="meta"><h3>المعلمات</h3><p>إدارة المعلمات والصفوف والطالبات</p></div>
       <div class="arrow">‹</div></div></div>
     <div class="card"><div class="tile" onclick="renderReportsList()">
       <div class="ico">📋</div><div class="meta"><h3>التقارير والزيارات</h3><p>تقارير الزيارات الصفية المحفوظة</p></div>
@@ -465,21 +489,21 @@ function renderTeachers(){
     const initial=(t.name||'?').trim().charAt(0);
     return `<div class="list-item" onclick="openTeacher('${t.id}')">
       <div class="av">${esc(initial)}</div>
-      <div class="info"><h4>${esc(t.name)}</h4><span>الصف: ${esc(t.grade)} • ${esc(t.count)} طالب</span></div>
+      <div class="info"><h4>${esc(t.name)}</h4><span>الصف: ${esc(t.grade)} • ${esc(t.count)} طالبة</span></div>
       <div class="badge">${esc(t.grade)}</div></div>`;
-  }).join('') : `<div class="empty"><div class="e-ic">👨‍🏫</div><p>لا يوجد مدرسون بعد<br>اضغط زر «إضافة مدرس» بالأعلى</p></div>`;
-  app().innerHTML = header('المدرسون', DB.school.name, 'renderHome()') + `
+  }).join('') : `<div class="empty"><div class="e-ic">👩‍🏫</div><p>لا توجد معلمات بعد<br>اضغط زر «إضافة معلمة» بالأعلى</p></div>`;
+  app().innerHTML = header('المعلمات', DB.school.name, 'renderHome()') + `
   <div class="content">
-    <div class="page-head"><h2>المدرسون</h2><p>${DB.teachers.length} مدرس مسجل</p></div>
-    <button class="add-btn" onclick="openTeacherForm()"><span class="pl">+</span> إضافة مدرس</button>
+    <div class="page-head"><h2>المعلمات</h2><p>${DB.teachers.length} معلمة مسجّلة</p></div>
+    <button class="add-btn" onclick="openTeacherForm()"><span class="pl">+</span> إضافة معلمة</button>
     ${list}
   </div>`;
 }
 function openTeacherForm(id){
   const t = id ? DB.teachers.find(x=>x.id===id) : {name:'',grade:'',count:''};
   openSheet(`
-    <h3>${id?'تعديل بيانات المدرس':'إضافة مدرس'}</h3><p class="sub">أدخل بيانات المدرس والصف</p>
-    <div class="fg"><label>اسم المدرس</label><input id="tname" value="${esc(t.name)}" placeholder="الاسم الكامل"></div>
+    <h3>${id?'تعديل بيانات المعلمة':'إضافة معلمة'}</h3><p class="sub">أدخل بيانات المعلمة والصف</p>
+    <div class="fg"><label>اسم المعلمة</label><input id="tname" value="${esc(t.name)}" placeholder="الاسم الكامل"></div>
     <div class="row2">
       <div class="fg"><label>الصف</label><input id="tgrade" value="${esc(t.grade)}" placeholder="مثال: الأول"></div>
       <div class="fg"><label>عدد الطلبة</label><input id="tcount" type="number" value="${esc(t.count)}" placeholder="0"></div>
@@ -509,14 +533,14 @@ function openTeacher(id){
       <h4>${esc(r.visitType)}</h4><span class="rc-date">${fmtDate(r.date)}</span></div>
       <div class="rc-body"><div class="rc-line"><span>مستوى الأداء</span>
       <span class="v" style="color:${pctColor(pct)}">${pct==null?'—':pct+'٪ • '+pctLabel(pct)}</span></div></div></div>`;
-  }).join('') : `<p style="color:var(--muted);font-size:.88rem;text-align:center;padding:20px">لا توجد تقارير لهذا المدرس</p>`;
+  }).join('') : `<p style="color:var(--muted);font-size:.88rem;text-align:center;padding:20px">لا توجد تقارير لهذه المعلمة</p>`;
   openSheet(`
-    <h3>${esc(t.name)}</h3><p class="sub">الصف ${esc(t.grade)} • ${esc(t.count)} طالب</p>
+    <h3>${esc(t.name)}</h3><p class="sub">الصف ${esc(t.grade)} • ${esc(t.count)} طالبة</p>
     <div class="btn-row" style="margin-bottom:18px">
       <button class="btn" onclick="closeSheet();openVisitForm('${id}')">➕ زيارة جديدة</button>
       <button class="mini-btn" onclick="closeSheet();openTeacherForm('${id}')">✏️ تعديل</button>
     </div>
-    <div class="sec-title" style="margin-top:4px">تقارير المدرس (${teacherReports.length})</div>
+    <div class="sec-title" style="margin-top:4px">تقارير المعلمة (${teacherReports.length})</div>
     ${repHtml}
   `);
 }
@@ -620,7 +644,7 @@ function delVisitType(i){DB.visitTypes.splice(i,1);saveDB(DB);renderVisitTypes()
 /* ================= VISIT / EVALUATION FORM ================= */
 function openVisitForm(teacherId){
   const t=DB.teachers.find(x=>x.id===teacherId);
-  if(!t){toast('اختر مدرساً أولاً');return;}
+  if(!t){toast('اختري معلمة أولاً');return;}
   const vtChips=DB.visitTypes.map((v,i)=>`<button class="select-chip ${i===0?'active':''}" onclick="pickVisitType(this,'${esc(v)}')">${esc(v)}</button>`).join('');
   const rateGroups=DB.criteria.map(c=>{
     const opts=c.options||DEFAULT_OPTIONS;
@@ -642,7 +666,7 @@ function openVisitForm(teacherId){
     <div class="sec-title" style="margin:6px 4px 12px">بنود التقييم</div>
     ${rateGroups}
     <div class="fg"><label>ملاحظات عامة على الزيارة</label>
-      <textarea id="vNotes" placeholder="اكتب ملاحظاتك وتوصياتك للمدرس..."></textarea></div>
+      <textarea id="vNotes" placeholder="اكتب ملاحظاتك وتوصياتك للمعلمة..."></textarea></div>
     <button class="btn" onclick="saveVisit('${teacherId}')">حفظ التقرير</button>
   `,true);
   window._scores={};
@@ -706,12 +730,12 @@ function renderReportsList(){
   </div>`;
 }
 function chooseTeacherForVisit(){
-  if(!DB.teachers.length){toast('أضف مدرساً أولاً');renderTeachers();return;}
+  if(!DB.teachers.length){toast('أضف معلمة أولاً');renderTeachers();return;}
   const items=DB.teachers.map(t=>`<div class="list-item" onclick="closeSheet();openVisitForm('${t.id}')">
     <div class="av">${esc((t.name||'?').charAt(0))}</div>
     <div class="info"><h4>${esc(t.name)}</h4><span>الصف ${esc(t.grade)}</span></div>
     <div class="arrow" style="color:var(--silver)">‹</div></div>`).join('');
-  openSheet(`<h3>اختر المدرس</h3><p class="sub">لمن هذه الزيارة الصفية؟</p>${items}`);
+  openSheet(`<h3>اختر المعلمة</h3><p class="sub">لمن هذه الزيارة الصفية؟</p>${items}`);
 }
 // يرجع بيانات عرض البنود المقيّمة في تقرير (بالاعتماد على اللقطة أو المعايير الحالية)
 function reportLines(r){
@@ -735,21 +759,120 @@ function viewReport(id){
       <img src="${LOGO}" style="width:80px;height:auto;margin:0 auto 6px">
       <div style="font-weight:800;font-size:1rem">${SCHOOL_NAME}</div>
       <div style="color:var(--muted);font-size:.8rem">${SCHOOL_SUB}</div>
+      ${DB.school&&DB.school.name?`<div style="margin-top:6px;font-weight:800;font-size:.95rem;color:var(--navy-2)">${esc(DB.school.name)}</div>`:''}
     </div>
     <h3>${esc(r.visitType)}</h3><p class="sub">${fmtDate(r.date)}</p>
     <div class="report-card"><div class="rc-body">
-      <div class="rc-line"><span>المدرس</span><span class="v">${esc(t.name)}</span></div>
-      <div class="rc-line"><span>الصف</span><span class="v">${esc(t.grade)} (${esc(t.count)} طالب)</span></div>
+      <div class="rc-line"><span>المعلمة</span><span class="v">${esc(t.name)}</span></div>
+      <div class="rc-line"><span>الصف</span><span class="v">${esc(t.grade)} (${esc(t.count)} طالبة)</span></div>
       ${lines}
       <div class="rc-line"><span><b>مستوى الأداء العام</b></span>
         <span class="v" style="color:${pctColor(pct)}">${pct==null?'—':pct+'٪'} — ${pctLabel(pct)}</span></div>
     </div></div>
     ${r.notes?`<div class="fg"><label>ملاحظات عامة</label>
       <div class="card" style="margin:0;line-height:1.7;font-size:.9rem">${esc(r.notes)}</div></div>`:''}
-    <button class="wa-btn" style="width:100%;margin-top:6px" onclick="shareWhatsApp('${id}')">📱 إرسال عبر واتساب</button>
+    <button class="btn" style="width:100%;margin-top:6px;margin-bottom:10px" onclick="openReportPDF('${id}')">📄 عرض / حفظ PDF</button>
+    <button class="wa-btn" style="width:100%" onclick="shareWhatsApp('${id}')">📱 إرسال عبر واتساب</button>
   `,true);
 }
 function delReport(id){DB.reports=DB.reports.filter(x=>x.id!==id);saveDB(DB);renderReportsList();toast('تم حذف التقرير');}
+
+/* ================= PDF (طباعة/حفظ) ================= */
+function openReportPDF(id){
+  const r=DB.reports.find(x=>x.id===id);
+  const t=DB.teachers.find(x=>x.id===r.teacherId)||{name:'—',grade:'—',count:'—'};
+  const pct=reportQualityPct(r);
+  const schoolLine = (DB.school&&DB.school.name)?DB.school.name:'';
+  const rows=reportLines(r).map(l=>`
+    <tr>
+      <td class="cri">${l.icon||''} ${esc(l.name)}</td>
+      <td class="val" style="color:${l.color}">${esc(l.label)}</td>
+    </tr>`).join('');
+  const doc=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>تقرير زيارة — ${esc(t.name)}</title>
+  <style>
+    @page{size:A4;margin:14mm}
+    *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#1B2E5A;margin:0;background:#fff;line-height:1.7}
+    .sheet{max-width:800px;margin:0 auto;padding:18px}
+    .head{text-align:center;border-bottom:3px solid #1B2E5A;padding-bottom:16px;margin-bottom:20px}
+    .head img{width:96px;height:auto;margin-bottom:8px}
+    .head .s1{font-weight:800;font-size:20px}
+    .head .s2{color:#5a6a8a;font-size:13px;margin-top:2px}
+    .head .s3{margin-top:8px;font-weight:800;font-size:16px;color:#24407a;
+      background:#eef2fb;display:inline-block;padding:5px 16px;border-radius:20px}
+    .title-band{background:linear-gradient(135deg,#1B2E5A,#2f4f96);color:#fff;border-radius:14px;
+      padding:14px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    .title-band h1{font-size:18px;margin:0}
+    .title-band .date{font-size:13px;opacity:.9}
+    .meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+    .meta .box{border:1px solid #e3e8f2;border-radius:12px;padding:12px 14px}
+    .meta .box .k{color:#5a6a8a;font-size:12px}
+    .meta .box .v{font-weight:800;font-size:15px;margin-top:2px}
+    table{width:100%;border-collapse:collapse;margin-bottom:18px}
+    th{background:#1B2E5A;color:#fff;padding:11px 14px;font-size:14px;text-align:right}
+    th:last-child{text-align:center;width:170px}
+    td{padding:11px 14px;border-bottom:1px solid #eef2fb;font-size:14px}
+    td.val{text-align:center;font-weight:800}
+    tr:nth-child(even) td{background:#fafbfe}
+    .overall{background:#eef2fb;border-radius:14px;padding:14px 18px;display:flex;
+      justify-content:space-between;align-items:center;margin-bottom:18px}
+    .overall .lbl{font-weight:800;font-size:15px}
+    .overall .score{font-weight:800;font-size:20px;color:${pctColor(pct)}}
+    .notes{border:1px solid #e3e8f2;border-radius:12px;padding:14px 16px;margin-bottom:20px}
+    .notes .nt{color:#5a6a8a;font-size:12px;margin-bottom:6px;font-weight:700}
+    .notes .nb{font-size:14px;white-space:pre-wrap}
+    .sign{display:flex;justify-content:space-between;margin-top:40px;padding:0 20px}
+    .sign .s{text-align:center;font-size:13px;color:#5a6a8a}
+    .sign .s .line{width:160px;border-top:1.5px solid #9aa7c2;margin-bottom:6px}
+    .foot{text-align:center;color:#9aa7c2;font-size:11px;margin-top:24px;border-top:1px solid #eef2fb;padding-top:10px}
+    .toolbar{position:sticky;top:0;background:#1B2E5A;padding:12px;display:flex;gap:10px;justify-content:center}
+    .toolbar button{background:#fff;color:#1B2E5A;border:none;padding:11px 22px;border-radius:10px;
+      font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
+    .toolbar .g{background:#2e9e6b;color:#fff}
+    @media print{.toolbar{display:none}.sheet{padding:0}}
+  </style></head><body>
+  <div class="toolbar">
+    <button class="g" onclick="window.print()">🖨️ حفظ PDF / طباعة</button>
+    <button onclick="window.close()">إغلاق</button>
+  </div>
+  <div class="sheet">
+    <div class="head">
+      <img src="${LOGO}" alt="logo">
+      <div class="s1">${SCHOOL_NAME}</div>
+      <div class="s2">${SCHOOL_SUB}</div>
+      ${schoolLine?`<div class="s3">${esc(schoolLine)}</div>`:''}
+    </div>
+    <div class="title-band">
+      <h1>📋 تقرير زيارة صفية — ${esc(r.visitType)}</h1>
+      <span class="date">${fmtDate(r.date)}</span>
+    </div>
+    <div class="meta">
+      <div class="box"><div class="k">المعلمة</div><div class="v">${esc(t.name)}</div></div>
+      <div class="box"><div class="k">الصف</div><div class="v">${esc(t.grade)} — ${esc(t.count)} طالبة</div></div>
+    </div>
+    <table>
+      <thead><tr><th>بند التقييم</th><th>التقدير</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>
+    <div class="overall">
+      <span class="lbl">مستوى الأداء العام</span>
+      <span class="score">${pct==null?'—':pct+'٪ — '+pctLabel(pct)}</span>
+    </div>
+    ${r.notes?`<div class="notes"><div class="nt">ملاحظات عامة وتوصيات</div><div class="nb">${esc(r.notes)}</div></div>`:''}
+    <div class="sign">
+      <div class="s"><div class="line"></div>توقيع المعلمة</div>
+      <div class="s"><div class="line"></div>توقيع المدير المشرف</div>
+    </div>
+    <div class="foot">تم إنشاء هذا التقرير عبر برنامج المدير — ${SCHOOL_NAME} ${SCHOOL_SUB}</div>
+  </div>
+  <script>window.addEventListener('load',function(){setTimeout(function(){try{window.focus();}catch(e){}},300);});<\/script>
+  </body></html>`;
+  const w=window.open('','_blank');
+  if(!w){toast('اسمح بالنوافذ المنبثقة لعرض PDF');return;}
+  w.document.open();w.document.write(doc);w.document.close();
+}
 
 /* ================= WHATSAPP EXPORT ================= */
 function shareWhatsApp(id){
@@ -758,8 +881,8 @@ function shareWhatsApp(id){
   let msg=`*${SCHOOL_NAME}*\n${SCHOOL_SUB}\n`;
   msg+=`━━━━━━━━━━━━━━\n`;
   msg+=`📋 *تقرير زيارة صفية*\n\n`;
-  msg+=`👨‍🏫 المدرس: ${t.name}\n`;
-  msg+=`🏫 الصف: ${t.grade} (${t.count} طالب)\n`;
+  msg+=`👩‍🏫 المعلمة: ${t.name}\n`;
+  msg+=`🏫 الصف: ${t.grade} (${t.count} طالبة)\n`;
   msg+=`🚪 نوع الزيارة: ${r.visitType}\n`;
   msg+=`📅 التاريخ: ${fmtDate(r.date)}\n`;
   msg+=`━━━━━━━━━━━━━━\n*بنود التقييم:*\n`;
