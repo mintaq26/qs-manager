@@ -193,6 +193,31 @@ input,select,textarea{font-family:inherit;outline:none}
 .empty p{font-size:.95rem}
 
 /* report */
+/* ===== بطاقة التقرير القابلة للمشاركة ===== */
+.rep-sheet{background:#fff;border-radius:18px;padding:22px 18px;border:1px solid var(--line);
+  box-shadow:var(--shadow-sm)}
+.rep-head{text-align:center;border-bottom:3px solid var(--navy);padding-bottom:14px;margin-bottom:16px}
+.rep-logo{width:78px;height:auto;margin:0 auto 6px;display:block}
+.rep-s1{font-weight:800;font-size:1.05rem;color:var(--navy)}
+.rep-s2{color:var(--muted);font-size:.78rem;margin-top:2px}
+.rep-school{margin-top:8px;font-weight:800;font-size:.92rem;color:var(--navy-2);
+  background:#eef2fb;display:inline-block;padding:5px 16px;border-radius:20px}
+.rep-title{background:var(--grad);color:#fff;border-radius:12px;padding:11px 16px;
+  font-weight:800;font-size:1.05rem;text-align:center}
+.rep-date{text-align:center;color:var(--muted);font-size:.83rem;margin:8px 0 16px}
+.rep-box{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.rep-line{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;
+  border-bottom:1px solid #eef2fb;font-size:.9rem}
+.rep-line:last-child{border-bottom:none}
+.rep-line:nth-child(even){background:#fafbfe}
+.rep-k{color:var(--navy-2)}
+.rep-v{font-weight:800}
+.rep-overall{background:#eef2fb!important;font-size:.95rem}
+.rep-notes{border:1px solid var(--line);border-radius:12px;padding:13px 15px;margin-top:14px}
+.rep-nt{color:var(--muted);font-size:.78rem;font-weight:700;margin-bottom:6px}
+.rep-nb{font-size:.9rem;line-height:1.7;white-space:pre-wrap}
+.rep-foot{text-align:center;color:#9aa7c2;font-size:.72rem;margin-top:16px;
+  border-top:1px solid #eef2fb;padding-top:10px}
 .report-card{background:#fff;border-radius:16px;box-shadow:var(--shadow-sm);border:1px solid var(--line);
   margin-bottom:13px;overflow:hidden}
 .report-card .rc-head{background:var(--grad);color:#fff;padding:13px 16px;display:flex;align-items:center;justify-content:space-between}
@@ -279,6 +304,15 @@ const uid = ()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 function esc(s){return (s||"").replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function fmtDate(ts){const d=new Date(ts);return d.toLocaleDateString('ar-EG',{year:'numeric',month:'long',day:'numeric'});}
 function fmtDateShort(ts){const d=new Date(ts);return d.toLocaleDateString('ar-EG',{month:'2-digit',day:'2-digit',year:'numeric'});}
+// صيغة عدد الطالبات حسب قواعد العربية
+function studentsCount(n){
+  n = parseInt(n)||0;
+  if(n===0) return 'لا توجد طالبات';
+  if(n===1) return 'طالبة واحدة';
+  if(n===2) return 'طالبتان';
+  if(n>=3 && n<=10) return n+' طالبات';
+  return n+' طالبة';
+}
 function toast(msg){const t=$('#toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2200);}
 // جودة الخيار كنسبة 0..1 حسب موقعه ضمن خيارات البند (الأول = الأفضل)
 function optQuality(options, label){
@@ -489,7 +523,7 @@ function renderTeachers(){
     const initial=(t.name||'?').trim().charAt(0);
     return `<div class="list-item" onclick="openTeacher('${t.id}')">
       <div class="av">${esc(initial)}</div>
-      <div class="info"><h4>${esc(t.name)}</h4><span>الصف: ${esc(t.grade)} • ${esc(t.count)} طالبة</span></div>
+      <div class="info"><h4>${esc(t.name)}</h4><span>الصف: ${esc(t.grade)} • ${studentsCount(t.count)}</span></div>
       <div class="badge">${esc(t.grade)}</div></div>`;
   }).join('') : `<div class="empty"><div class="e-ic">👩‍🏫</div><p>لا توجد معلمات بعد<br>اضغط زر «إضافة معلمة» بالأعلى</p></div>`;
   app().innerHTML = header('المعلمات', DB.school.name, 'renderHome()') + `
@@ -535,7 +569,7 @@ function openTeacher(id){
       <span class="v" style="color:${pctColor(pct)}">${pct==null?'—':pct+'٪ • '+pctLabel(pct)}</span></div></div></div>`;
   }).join('') : `<p style="color:var(--muted);font-size:.88rem;text-align:center;padding:20px">لا توجد تقارير لهذه المعلمة</p>`;
   openSheet(`
-    <h3>${esc(t.name)}</h3><p class="sub">الصف ${esc(t.grade)} • ${esc(t.count)} طالبة</p>
+    <h3>${esc(t.name)}</h3><p class="sub">الصف ${esc(t.grade)} • ${studentsCount(t.count)}</p>
     <div class="btn-row" style="margin-bottom:18px">
       <button class="btn" onclick="closeSheet();openVisitForm('${id}')">➕ زيارة جديدة</button>
       <button class="mini-btn" onclick="closeSheet();openTeacherForm('${id}')">✏️ تعديل</button>
@@ -751,127 +785,89 @@ function reportLines(r){
 }
 function viewReport(id){
   const r=DB.reports.find(x=>x.id===id);const t=DB.teachers.find(x=>x.id===r.teacherId)||{name:'—',grade:'—',count:'—'};
-  const lines=reportLines(r).map(l=>`<div class="rc-line"><span>${l.icon||''} ${esc(l.name)}</span>
-      <span class="v" style="color:${l.color}">${esc(l.label)}</span></div>`).join('');
+  const lines=reportLines(r).map(l=>`<div class="rep-line"><span class="rep-k">${l.icon||''} ${esc(l.name)}</span>
+      <span class="rep-v" style="color:${l.color}">${esc(l.label)}</span></div>`).join('');
   const pct=reportQualityPct(r);
+  const schoolName = (DB.school&&DB.school.name)?DB.school.name:'';
   openSheet(`
-    <div style="text-align:center;margin-bottom:14px">
-      <img src="${LOGO}" style="width:80px;height:auto;margin:0 auto 6px">
-      <div style="font-weight:800;font-size:1rem">${SCHOOL_NAME}</div>
-      <div style="color:var(--muted);font-size:.8rem">${SCHOOL_SUB}</div>
-      ${DB.school&&DB.school.name?`<div style="margin-top:6px;font-weight:800;font-size:.95rem;color:var(--navy-2)">${esc(DB.school.name)}</div>`:''}
+    <div id="repCapture" class="rep-sheet">
+      <div class="rep-head">
+        <img src="${LOGO}" class="rep-logo">
+        <div class="rep-s1">${SCHOOL_NAME}</div>
+        <div class="rep-s2">${SCHOOL_SUB}</div>
+        ${schoolName?`<div class="rep-school">${esc(schoolName)}</div>`:''}
+      </div>
+      <div class="rep-title">${esc(r.visitType)}</div>
+      <div class="rep-date">${fmtDate(r.date)}</div>
+      <div class="rep-box">
+        <div class="rep-line"><span class="rep-k">المعلمة</span><span class="rep-v">${esc(t.name)}</span></div>
+        <div class="rep-line"><span class="rep-k">الصف</span><span class="rep-v">${esc(t.grade)} (${studentsCount(t.count)})</span></div>
+        ${lines}
+        <div class="rep-line rep-overall"><span class="rep-k"><b>مستوى الأداء العام</b></span>
+          <span class="rep-v" style="color:${pctColor(pct)}">${pct==null?'—':pct+'٪'} — ${pctLabel(pct)}</span></div>
+      </div>
+      ${r.notes?`<div class="rep-notes"><div class="rep-nt">ملاحظات عامة وتوصيات</div><div class="rep-nb">${esc(r.notes)}</div></div>`:''}
+      <div class="rep-foot">برنامج المدير — ${SCHOOL_NAME} ${SCHOOL_SUB}</div>
     </div>
-    <h3>${esc(r.visitType)}</h3><p class="sub">${fmtDate(r.date)}</p>
-    <div class="report-card"><div class="rc-body">
-      <div class="rc-line"><span>المعلمة</span><span class="v">${esc(t.name)}</span></div>
-      <div class="rc-line"><span>الصف</span><span class="v">${esc(t.grade)} (${esc(t.count)} طالبة)</span></div>
-      ${lines}
-      <div class="rc-line"><span><b>مستوى الأداء العام</b></span>
-        <span class="v" style="color:${pctColor(pct)}">${pct==null?'—':pct+'٪'} — ${pctLabel(pct)}</span></div>
-    </div></div>
-    ${r.notes?`<div class="fg"><label>ملاحظات عامة</label>
-      <div class="card" style="margin:0;line-height:1.7;font-size:.9rem">${esc(r.notes)}</div></div>`:''}
-    <button class="btn" style="width:100%;margin-top:6px;margin-bottom:10px" onclick="openReportPDF('${id}')">📄 عرض / حفظ PDF</button>
-    <button class="wa-btn" style="width:100%" onclick="shareWhatsApp('${id}')">📱 إرسال عبر واتساب</button>
+    <div class="btn-row" style="margin-top:14px">
+      <button class="wa-btn" style="flex:1" id="shareBtn" onclick="shareReportImage('${id}')">📤 مشاركة / إرسال</button>
+    </div>
+    <button class="btn btn-ghost" style="width:100%;margin-top:10px;box-shadow:none" onclick="shareWhatsApp('${id}')">📱 إرسال كنص واتساب</button>
   `,true);
 }
 function delReport(id){DB.reports=DB.reports.filter(x=>x.id!==id);saveDB(DB);renderReportsList();toast('تم حذف التقرير');}
 
-/* ================= PDF (طباعة/حفظ) ================= */
-function openReportPDF(id){
-  const r=DB.reports.find(x=>x.id===id);
-  const t=DB.teachers.find(x=>x.id===r.teacherId)||{name:'—',grade:'—',count:'—'};
-  const pct=reportQualityPct(r);
-  const schoolLine = (DB.school&&DB.school.name)?DB.school.name:'';
-  const rows=reportLines(r).map(l=>`
-    <tr>
-      <td class="cri">${l.icon||''} ${esc(l.name)}</td>
-      <td class="val" style="color:${l.color}">${esc(l.label)}</td>
-    </tr>`).join('');
-  const doc=`<!DOCTYPE html><html lang="ar" dir="rtl"><head><meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>تقرير زيارة — ${esc(t.name)}</title>
-  <style>
-    @page{size:A4;margin:14mm}
-    *{box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    body{font-family:'Segoe UI',Tahoma,Arial,sans-serif;color:#1B2E5A;margin:0;background:#fff;line-height:1.7}
-    .sheet{max-width:800px;margin:0 auto;padding:18px}
-    .head{text-align:center;border-bottom:3px solid #1B2E5A;padding-bottom:16px;margin-bottom:20px}
-    .head img{width:96px;height:auto;margin-bottom:8px}
-    .head .s1{font-weight:800;font-size:20px}
-    .head .s2{color:#5a6a8a;font-size:13px;margin-top:2px}
-    .head .s3{margin-top:8px;font-weight:800;font-size:16px;color:#24407a;
-      background:#eef2fb;display:inline-block;padding:5px 16px;border-radius:20px}
-    .title-band{background:linear-gradient(135deg,#1B2E5A,#2f4f96);color:#fff;border-radius:14px;
-      padding:14px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
-    .title-band h1{font-size:18px;margin:0}
-    .title-band .date{font-size:13px;opacity:.9}
-    .meta{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
-    .meta .box{border:1px solid #e3e8f2;border-radius:12px;padding:12px 14px}
-    .meta .box .k{color:#5a6a8a;font-size:12px}
-    .meta .box .v{font-weight:800;font-size:15px;margin-top:2px}
-    table{width:100%;border-collapse:collapse;margin-bottom:18px}
-    th{background:#1B2E5A;color:#fff;padding:11px 14px;font-size:14px;text-align:right}
-    th:last-child{text-align:center;width:170px}
-    td{padding:11px 14px;border-bottom:1px solid #eef2fb;font-size:14px}
-    td.val{text-align:center;font-weight:800}
-    tr:nth-child(even) td{background:#fafbfe}
-    .overall{background:#eef2fb;border-radius:14px;padding:14px 18px;display:flex;
-      justify-content:space-between;align-items:center;margin-bottom:18px}
-    .overall .lbl{font-weight:800;font-size:15px}
-    .overall .score{font-weight:800;font-size:20px;color:${pctColor(pct)}}
-    .notes{border:1px solid #e3e8f2;border-radius:12px;padding:14px 16px;margin-bottom:20px}
-    .notes .nt{color:#5a6a8a;font-size:12px;margin-bottom:6px;font-weight:700}
-    .notes .nb{font-size:14px;white-space:pre-wrap}
-    .sign{display:flex;justify-content:space-between;margin-top:40px;padding:0 20px}
-    .sign .s{text-align:center;font-size:13px;color:#5a6a8a}
-    .sign .s .line{width:160px;border-top:1.5px solid #9aa7c2;margin-bottom:6px}
-    .foot{text-align:center;color:#9aa7c2;font-size:11px;margin-top:24px;border-top:1px solid #eef2fb;padding-top:10px}
-    .toolbar{position:sticky;top:0;background:#1B2E5A;padding:12px;display:flex;gap:10px;justify-content:center}
-    .toolbar button{background:#fff;color:#1B2E5A;border:none;padding:11px 22px;border-radius:10px;
-      font-weight:800;font-size:14px;cursor:pointer;font-family:inherit}
-    .toolbar .g{background:#2e9e6b;color:#fff}
-    @media print{.toolbar{display:none}.sheet{padding:0}}
-  </style></head><body>
-  <div class="toolbar">
-    <button class="g" onclick="window.print()">🖨️ حفظ PDF / طباعة</button>
-    <button onclick="window.close()">إغلاق</button>
-  </div>
-  <div class="sheet">
-    <div class="head">
-      <img src="${LOGO}" alt="logo">
-      <div class="s1">${SCHOOL_NAME}</div>
-      <div class="s2">${SCHOOL_SUB}</div>
-      ${schoolLine?`<div class="s3">${esc(schoolLine)}</div>`:''}
-    </div>
-    <div class="title-band">
-      <h1>📋 تقرير زيارة صفية — ${esc(r.visitType)}</h1>
-      <span class="date">${fmtDate(r.date)}</span>
-    </div>
-    <div class="meta">
-      <div class="box"><div class="k">المعلمة</div><div class="v">${esc(t.name)}</div></div>
-      <div class="box"><div class="k">الصف</div><div class="v">${esc(t.grade)} — ${esc(t.count)} طالبة</div></div>
-    </div>
-    <table>
-      <thead><tr><th>بند التقييم</th><th>التقدير</th></tr></thead>
-      <tbody>${rows}</tbody>
-    </table>
-    <div class="overall">
-      <span class="lbl">مستوى الأداء العام</span>
-      <span class="score">${pct==null?'—':pct+'٪ — '+pctLabel(pct)}</span>
-    </div>
-    ${r.notes?`<div class="notes"><div class="nt">ملاحظات عامة وتوصيات</div><div class="nb">${esc(r.notes)}</div></div>`:''}
-    <div class="sign">
-      <div class="s"><div class="line"></div>توقيع المعلمة</div>
-      <div class="s"><div class="line"></div>توقيع المدير المشرف</div>
-    </div>
-    <div class="foot">تم إنشاء هذا التقرير عبر برنامج المدير — ${SCHOOL_NAME} ${SCHOOL_SUB}</div>
-  </div>
-  <script>window.addEventListener('load',function(){setTimeout(function(){try{window.focus();}catch(e){}},300);});<\/script>
-  </body></html>`;
-  const w=window.open('','_blank');
-  if(!w){toast('اسمح بالنوافذ المنبثقة لعرض PDF');return;}
-  w.document.open();w.document.write(doc);w.document.close();
+/* ================= مشاركة التقرير كصورة ================= */
+function loadHtml2Canvas(){
+  return new Promise((resolve,reject)=>{
+    if(window.html2canvas) return resolve(window.html2canvas);
+    const s=document.createElement('script');
+    s.src='https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+    s.onload=()=>resolve(window.html2canvas);
+    s.onerror=()=>reject(new Error('no-net'));
+    document.head.appendChild(s);
+  });
+}
+async function shareReportImage(id){
+  const btn=document.getElementById('shareBtn');
+  const node=document.getElementById('repCapture');
+  if(!node){toast('تعذّر إيجاد التقرير');return;}
+  const old=btn?btn.textContent:''; if(btn){btn.textContent='⏳ جارٍ التجهيز...';btn.disabled=true;}
+  let h2c;
+  try{ h2c=await loadHtml2Canvas(); }
+  catch(e){
+    if(btn){btn.textContent=old;btn.disabled=false;}
+    toast('تحتاج اتصالاً بالإنترنت أول مرة للمشاركة كصورة');
+    // بديل: مشاركة نصية
+    shareWhatsApp(id); return;
+  }
+  try{
+    const canvas=await h2c(node,{scale:2,backgroundColor:'#ffffff',useCORS:true,logging:false});
+    const r=DB.reports.find(x=>x.id===id);
+    const t=DB.teachers.find(x=>x.id===r.teacherId)||{name:'تقرير'};
+    const fname='تقرير_'+(t.name||'زيارة').replace(/\s+/g,'_')+'.png';
+    canvas.toBlob(async(blob)=>{
+      if(btn){btn.textContent=old;btn.disabled=false;}
+      if(!blob){toast('تعذّر إنشاء الصورة');return;}
+      const file=new File([blob],fname,{type:'image/png'});
+      // مشاركة عبر نظام الهاتف (يشمل واتساب) إن كانت مدعومة
+      if(navigator.canShare && navigator.canShare({files:[file]})){
+        try{
+          await navigator.share({files:[file],title:'تقرير زيارة صفية',
+            text:'تقرير زيارة صفية — '+SCHOOL_NAME});
+          return;
+        }catch(err){ if(err && err.name==='AbortError') return; }
+      }
+      // بديل: تنزيل الصورة
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a');a.href=url;a.download=fname;a.click();
+      setTimeout(()=>URL.revokeObjectURL(url),1500);
+      toast('تم حفظ صورة التقرير — يمكنك إرسالها بواتساب');
+    },'image/png');
+  }catch(e){
+    if(btn){btn.textContent=old;btn.disabled=false;}
+    toast('تعذّر إنشاء الصورة، جرّب الإرسال كنص');
+  }
 }
 
 /* ================= WHATSAPP EXPORT ================= */
@@ -882,7 +878,7 @@ function shareWhatsApp(id){
   msg+=`━━━━━━━━━━━━━━\n`;
   msg+=`📋 *تقرير زيارة صفية*\n\n`;
   msg+=`👩‍🏫 المعلمة: ${t.name}\n`;
-  msg+=`🏫 الصف: ${t.grade} (${t.count} طالبة)\n`;
+  msg+=`🏫 الصف: ${t.grade} (${studentsCount(t.count)})\n`;
   msg+=`🚪 نوع الزيارة: ${r.visitType}\n`;
   msg+=`📅 التاريخ: ${fmtDate(r.date)}\n`;
   msg+=`━━━━━━━━━━━━━━\n*بنود التقييم:*\n`;
